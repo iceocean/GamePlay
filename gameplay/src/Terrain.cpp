@@ -1,5 +1,6 @@
 #include "Base.h"
 #include "Terrain.h"
+#include "TerrainPatch.h"
 #include "Node.h"
 #include "FileSystem.h"
 
@@ -15,7 +16,7 @@ namespace gameplay
 // specified terrain size, expressed as a ratio of the average
 // of the dimensions of the terrain heightfield:
 //
-//   maxHeight = (image.width + image.height) / 2 * DEFAULT_TERRAIN_HEIGHT_RATIO
+//   heightMax = (image.width + image.height) / 2 * DEFAULT_TERRAIN_HEIGHT_RATIO
 //
 #define DEFAULT_TERRAIN_HEIGHT_RATIO 0.3f
 
@@ -30,13 +31,18 @@ namespace gameplay
 float getDefaultHeight(unsigned int width, unsigned int height);
 
 Terrain::Terrain() :
-    _heightfield(NULL), _node(NULL), _normalMap(NULL), _flags(ENABLE_FRUSTUM_CULLING | ENABLE_LEVEL_OF_DETAIL),
+    _heightfield(NULL), _node(NULL), _normalMap(NULL), _flags(FRUSTUM_CULLING | LEVEL_OF_DETAIL),
     _dirtyFlags(TERRAIN_DIRTY_WORLD_MATRIX | TERRAIN_DIRTY_INV_WORLD_MATRIX | TERRAIN_DIRTY_NORMAL_MATRIX)
 {
 }
 
 Terrain::~Terrain()
 {
+    for (size_t i = 0, count = _patches.size(); i < count; ++i)
+    {
+        SAFE_DELETE(_patches[i]);
+    }
+
     if (_node)
         _node->removeListener(this);
 
@@ -103,7 +109,7 @@ Terrain* Terrain::create(const char* path, Properties* properties)
                 // Read normalized height values from heightmap image
                 heightfield = HeightField::createFromImage(heightmap, 0, 1);
             }
-            else if (ext == ".RAW")
+            else if (ext == ".RAW" || ext == ".R16")
             {
                 // Require additional properties to be specified for RAW files
                 Vector2 imageSize;
@@ -145,7 +151,7 @@ Terrain* Terrain::create(const char* path, Properties* properties)
                 // Read normalized height values from heightmap image
                 heightfield = HeightField::createFromImage(heightmap, 0, 1);
             }
-            else if (ext == ".RAW")
+            else if (ext == ".RAW" || ext == ".R16")
             {
                 GP_WARN("RAW heightmaps must be specified inside a heightmap block with width and height properties.");
                 if (!externalProperties)
@@ -551,6 +557,18 @@ const Matrix& Terrain::getNormalMatrix() const
     }
 
     return _normalMatrix;
+}
+
+const Matrix& Terrain::getWorldViewMatrix() const
+{
+    static Matrix worldView;
+
+    if (_node)
+        Matrix::multiply(_node->getViewMatrix(), getWorldMatrix(), &worldView);
+    else
+        worldView = getWorldMatrix(); // no node, so nothing to get view from
+
+    return worldView;
 }
 
 const Matrix& Terrain::getWorldViewProjectionMatrix() const

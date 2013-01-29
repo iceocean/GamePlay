@@ -60,6 +60,8 @@ void CharacterGame::initialize()
 
     // Initialize scene.
     _scene->visit(this, &CharacterGame::initializeScene);
+
+    _gamepad = getGamepad(0);
 }
 
 bool CharacterGame::initializeScene(Node* node)
@@ -186,7 +188,8 @@ void CharacterGame::jump()
 void CharacterGame::kick()
 {
     if (!_jumpClip->isPlaying())
-        play("kick", false, 1.0f);
+        play("kick", false, 1.75f);
+    _kicking = true;
 }
 
 bool CharacterGame::isOnFloor() const
@@ -207,6 +210,8 @@ void CharacterGame::update(float elapsedTime)
         _hasBall = false;
         _applyKick = false;
     }
+    if (!_kickClip->isPlaying())
+        _kicking = false;
 
     _gamepad->update(elapsedTime);
 
@@ -239,11 +244,21 @@ void CharacterGame::update(float elapsedTime)
 
     _currentDirection.set(Vector2::zero());
 
-    if (_gamepad->getJoystickCount() > 0)
+    if (!_kicking)
     {
-        _gamepad->getJoystickValues(0, &_currentDirection);
+        if (_gamepad->getJoystickCount() > 0)
+        {
+            _gamepad->getJoystickValues(0, &_currentDirection);
+        }
     }
-    else
+    if (_gamepad->getJoystickCount() > 1)
+    {
+        Vector2 out;
+        _gamepad->getJoystickValues(1, &out);
+       _character->getNode()->rotateY(-MATH_DEG_TO_RAD(out.x * 2.0f));
+    }
+    
+    if (_currentDirection.isZero())
     {
         // Construct direction vector from keyboard input
         if (_keyFlags & NORTH)
@@ -485,6 +500,27 @@ void CharacterGame::touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int
     }
 }
 
+bool CharacterGame::mouseEvent(Mouse::MouseEvent evt, int x, int y, int wheelDelta)
+{
+    if (evt == Mouse::MOUSE_PRESS_RIGHT_BUTTON)
+    {
+        kick();
+        return true;
+    }
+    return false;
+}
+
+void CharacterGame::gamepadEvent(Gamepad::GamepadEvent evt, Gamepad* gamepad)
+{
+    switch(evt)
+    {
+    case Gamepad::CONNECTED_EVENT:
+    case Gamepad::DISCONNECTED_EVENT:
+        _gamepad = getGamepad(0);
+        break;
+    }
+}
+
 void CharacterGame::adjustCamera(float elapsedTime)
 {
     static float cameraOffset = 0.0f;
@@ -623,38 +659,4 @@ void CharacterGame::releaseBall()
     
     PhysicsRigidBody* basketball = (PhysicsRigidBody*) _basketballNode->getCollisionObject();
     basketball->setEnabled(true);
-}
-
-void CharacterGame::gamepadEvent(Gamepad::GamepadEvent evt, Gamepad* gamepad)
-{
-    switch(evt)
-    {
-    case Gamepad::CONNECTED_EVENT:
-        if (gamepad->isVirtual())
-        {
-            gamepad->getForm()->setConsumeInputEvents(false);
-            _virtualGamepad = gamepad;
-        }
-        else
-        {
-            _physicalGamepad = gamepad;
-        }
-
-        if (_physicalGamepad)
-        {
-            _gamepad = _physicalGamepad;
-        }
-        else
-        {
-            _gamepad = _virtualGamepad;
-        }
-
-        break;
-    case Gamepad::DISCONNECTED_EVENT:
-        if (gamepad == _physicalGamepad)
-        {
-            _gamepad = _virtualGamepad;
-        }
-        break;
-    }
 }

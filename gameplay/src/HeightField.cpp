@@ -35,36 +35,28 @@ float normalizedHeightPacked(float r, float g, float b)
     return (256.0f*r + g + 0.00390625f*b) / 65536.0f;
 }
 
-HeightField* HeightField::createFromImage(const char* path, float minHeight, float maxHeight)
+HeightField* HeightField::createFromImage(const char* path, float heightMin, float heightMax)
 {
-    return create(path, 0, 0, minHeight, maxHeight);
+    return create(path, 0, 0, heightMin, heightMax);
 }
 
-HeightField* HeightField::createFromRAW(const char* path, unsigned int width, unsigned int height, float minHeight, float maxHeight)
+HeightField* HeightField::createFromRAW(const char* path, unsigned int width, unsigned int height, float heightMin, float heightMax)
 {
-    return create(path, width, height, minHeight, maxHeight);
+    return create(path, width, height, heightMin, heightMax);
 }
 
-HeightField* HeightField::create(const char* path, unsigned int width, unsigned int height, float minHeight, float maxHeight)
+HeightField* HeightField::create(const char* path, unsigned int width, unsigned int height, float heightMin, float heightMax)
 {
     GP_ASSERT(path);
-    GP_ASSERT(maxHeight >= minHeight);
+    GP_ASSERT(heightMax >= heightMin);
 
-    // Validate input parameters
-    size_t pathLength = strlen(path);
-    if (pathLength <= 4)
-    {
-        GP_WARN("Unrecognized file extension for heightfield image: %s.", path);
-        return NULL;
-    }
-
-    float heightScale = maxHeight - minHeight;
+    float heightScale = heightMax - heightMin;
 
     HeightField* heightfield = NULL;
 
     // Load height data from image
-    const char* ext = path + (pathLength - 4);
-    if (ext[0] == '.' && toupper(ext[1]) == 'P' && toupper(ext[2]) == 'N' && toupper(ext[3]) == 'G')
+    std::string ext = FileSystem::getExtension(path);
+    if (ext == ".PNG")
     {
         // Normal image
         Image* image = Image::create(path);
@@ -96,18 +88,18 @@ HeightField* HeightField::create(const char* path, unsigned int width, unsigned 
             for (unsigned int x = 0, w = image->getWidth(); x < w; ++x)
             {
                 idx = (y*w + x) * pixelSize;
-                heights[i++] = minHeight + normalizedHeightPacked(data[idx], data[idx + 1], data[idx + 2]) * heightScale;
+                heights[i++] = heightMin + normalizedHeightPacked(data[idx], data[idx + 1], data[idx + 2]) * heightScale;
             }
         }
 
         SAFE_RELEASE(image);
     }
-    else if (ext[0] == '.' && toupper(ext[1]) == 'R' && toupper(ext[2]) == 'A' && toupper(ext[3]) == 'W')
+    else if (ext == ".RAW" || ext == ".R16")
     {
         // RAW image (headerless)
-        if (width < 2 || height < 2 || maxHeight < 0)
+        if (width < 2 || height < 2 || heightMax < 0)
         {
-            GP_WARN("Invalid 'width', 'height' or 'maxHeight' parameter for RAW heightfield image: %s.", path);
+            GP_WARN("Invalid 'width', 'height' or 'heightMax' parameter for RAW heightfield image: %s.", path);
             return NULL;
         }
 
@@ -132,29 +124,27 @@ HeightField* HeightField::create(const char* path, unsigned int width, unsigned 
         heightfield = HeightField::create(width, height);
         float* heights = heightfield->getArray();
 
-        // RAW files have an origin of bottom left, whereas our height array needs an origin of
-        // top left, so we need to flip the Y as we write height values out.
         if (bits == 16)
         {
             // 16-bit (0-65535)
             int idx;
-            for (int y = height-1, i = 0; y >= 0; --y)
+            for (unsigned int y = 0, i = 0; y < height; ++y)
             {
                 for (unsigned int x = 0; x < width; ++x, ++i)
                 {
                     idx = (y * width + x) << 1;
-                    heights[i] = minHeight + ((bytes[idx] | (int)bytes[idx+1] << 8) / 65535.0f) * heightScale;
+                    heights[i] = heightMin + ((bytes[idx] | (int)bytes[idx+1] << 8) / 65535.0f) * heightScale;
                 }
             }
         }
         else
         {
             // 8-bit (0-255)
-            for (int y = height-1, i = 0; y >= 0; --y)
+            for (unsigned int y = 0, i = 0; y < height; ++y)
             {
                 for (unsigned int x = 0; x < width; ++x, ++i)
                 {
-                    heights[i] = minHeight + (bytes[y * width + x] / 255.0f) * heightScale;
+                    heights[i] = heightMin + (bytes[y * width + x] / 255.0f) * heightScale;
                 }
             }
         }

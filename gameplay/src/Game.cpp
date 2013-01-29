@@ -183,14 +183,11 @@ void Game::shutdown()
 		}
 		_scriptController->finalize();
 
-        std::vector<Gamepad*>* gamepads = Gamepad::getGamepads();
-        if (gamepads)
+        unsigned int gamepadCount = Gamepad::getGamepadCount();
+        for (unsigned int i = 0; i < gamepadCount; i++)
         {
-            for (size_t i = 0, count = gamepads->size(); i < count; ++i)
-            {
-                SAFE_DELETE((*gamepads)[i]);
-            }
-            gamepads->clear();
+            Gamepad* gamepad = Gamepad::getGamepad(i, false);
+            SAFE_DELETE(gamepad);
         }
 
         _animationController->finalize();
@@ -209,6 +206,7 @@ void Game::shutdown()
 
         SAFE_DELETE(_audioListener);
 
+        FrameBuffer::finalize();
         RenderState::finalize();
 
         SAFE_DELETE(_properties);
@@ -579,13 +577,25 @@ void Game::loadGamepads()
     {
         // Check if there are any virtual gamepads included in the .config file.
         // If there are, create and initialize them.
-        Properties* gamepadProperties = _properties->getNamespace("gamepads", true);
-        if (gamepadProperties && gamepadProperties->exists("form"))
+        _properties->rewind();
+        Properties* inner = _properties->getNextNamespace();
+        while (inner != NULL)
         {
-            const char* gamepadFormPath = gamepadProperties->getString("form");
-            GP_ASSERT(gamepadFormPath);
-            Gamepad* gamepad = Gamepad::add(gamepadFormPath);
-            GP_ASSERT(gamepad);
+            std::string spaceName(inner->getNamespace());
+            // This namespace was accidentally named "gamepads" originally but we'll keep this check
+            // for backwards compatibility.
+            if (spaceName == "gamepads" || spaceName == "gamepad")
+            {
+                if (inner->exists("form"))
+                {
+                    const char* gamepadFormPath = inner->getString("form");
+                    GP_ASSERT(gamepadFormPath);
+                    Gamepad* gamepad = Gamepad::add(gamepadFormPath);
+                    GP_ASSERT(gamepad);
+                }
+            }
+
+            inner = _properties->getNextNamespace();
         }
     }
 }

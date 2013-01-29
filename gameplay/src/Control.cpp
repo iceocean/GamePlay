@@ -43,6 +43,8 @@ void Control::initialize(Theme::Style* style, Properties* properties)
 
     _consumeInputEvents = properties->getBool("consumeInputEvents", true);
 
+    _visible = properties->getBool("visible", true);
+
     if (properties->exists("zIndex"))
     {
         _zIndex = properties->getInt("zIndex");
@@ -249,13 +251,11 @@ void Control::setVisible(bool visible)
 {
     if (visible && !_visible)
     {
-        setEnabled(true);
         _visible = true;
         _dirty = true;
     }
     else if (!visible && _visible)
     {
-        setEnabled(false);
         _visible = false;
         _dirty = true;
     }
@@ -272,7 +272,7 @@ void Control::setOpacity(float opacity, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setOpacity(opacity);
     }
@@ -311,7 +311,7 @@ void Control::setBorder(float top, float bottom, float left, float right, unsign
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setBorder(top, bottom, left, right);
     }
@@ -332,7 +332,7 @@ void Control::setSkinRegion(const Rectangle& region, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setSkinRegion(region, _style->_tw, _style->_th);
     }
@@ -352,7 +352,7 @@ void Control::setSkinColor(const Vector4& color, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setSkinColor(color);
     }
@@ -401,7 +401,7 @@ void Control::setImageRegion(const char* id, const Rectangle& region, unsigned c
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setImageRegion(id, region, _style->_tw, _style->_th);
     }
@@ -422,7 +422,7 @@ void Control::setImageColor(const char* id, const Vector4& color, unsigned char 
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setImageColor(id, color);
     }
@@ -450,7 +450,7 @@ void Control::setCursorRegion(const Rectangle& region, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setCursorRegion(region, _style->_tw, _style->_th);
     }
@@ -471,7 +471,7 @@ void Control::setCursorColor(const Vector4& color, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setCursorColor(color);
     }
@@ -499,7 +499,7 @@ void Control::setFont(Font* font, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setFont(font);
     }
@@ -520,7 +520,7 @@ void Control::setFontSize(unsigned int fontSize, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setFontSize(fontSize);
     }
@@ -541,7 +541,7 @@ void Control::setTextColor(const Vector4& color, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setTextColor(color);
     }
@@ -562,7 +562,7 @@ void Control::setTextAlignment(Font::Justify alignment, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setTextAlignment(alignment);
     }
@@ -583,7 +583,7 @@ void Control::setTextRightToLeft(bool rightToLeft, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setTextRightToLeft(rightToLeft);
     }
@@ -762,9 +762,6 @@ void Control::addSpecificListener(Control::Listener* listener, Listener::EventTy
 
 bool Control::touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int contactIndex)
 {
-    if (!isEnabled())
-        return false;
-
     switch (evt)
     {
     case Touch::TOUCH_PRESS:
@@ -818,11 +815,6 @@ bool Control::keyEvent(Keyboard::KeyEvent evt, int key)
 
 bool Control::mouseEvent(Mouse::MouseEvent evt, int x, int y, int wheelDelta)
 {
-    if (!isEnabled())
-    {
-        return false;
-    }
-
     // By default, mouse events are either interpreted as touch events or ignored.
     switch (evt)
     {
@@ -969,7 +961,9 @@ void Control::update(const Control* container, const Vector2& offset)
 
     // Cache themed attributes for performance.
     _skin = getSkin(_state);
-    _opacity = getOpacity(_state);
+
+    // Current opacity should be multiplied by that of the parent container.
+    _opacity = getOpacity(_state) * container->_opacity;
 }
 
 void Control::drawBorder(SpriteBatch* spriteBatch, const Rectangle& clip)
@@ -1041,9 +1035,6 @@ void Control::drawText(const Rectangle& position)
 
 void Control::draw(SpriteBatch* spriteBatch, const Rectangle& clip, bool needsClear, bool cleared, float targetHeight)
 {
-    if (!_visible)
-        return;
-
     if (needsClear)
     {
         GL_ASSERT( glEnable(GL_SCISSOR_TEST) );
@@ -1051,6 +1042,9 @@ void Control::draw(SpriteBatch* spriteBatch, const Rectangle& clip, bool needsCl
         Game::getInstance()->clear(Game::CLEAR_COLOR, Vector4::zero(), 1.0f, 0);
         GL_ASSERT( glDisable(GL_SCISSOR_TEST) );
     }
+
+    if (!_visible)
+        return;
 
     spriteBatch->start();
     drawBorder(spriteBatch, clip);
@@ -1338,7 +1332,7 @@ void Control::setImageList(Theme::ImageList* imageList, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setImageList(imageList);
     }
@@ -1352,7 +1346,7 @@ void Control::setCursor(Theme::ThemeImage* cursor, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setCursor(cursor);
     }
@@ -1366,7 +1360,7 @@ void Control::setSkin(Theme::Skin* skin, unsigned char states)
     Theme::Style::Overlay* overlays[Theme::Style::OVERLAY_MAX] = { 0 };
     getOverlays(states, overlays);
 
-    for (int i = 0; i < Theme::Style::OVERLAY_MAX - 1 && overlays[i]; ++i)
+    for (int i = 0; i < Theme::Style::OVERLAY_MAX && overlays[i]; ++i)
     {
         overlays[i]->setSkin(skin);
     }

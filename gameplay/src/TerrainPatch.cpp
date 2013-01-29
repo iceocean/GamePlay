@@ -5,6 +5,10 @@
 #include "Scene.h"
 #include "Game.h"
 
+// Default terrain shaders
+#define TERRAIN_VSH "res/shaders/terrain.vert"
+#define TERRAIN_FSH "res/shaders/terrain.frag"
+
 namespace gameplay
 {
 
@@ -470,7 +474,7 @@ bool TerrainPatch::updateMaterial()
             }
         }
 
-        Material* material = Material::create("res/shaders/terrain.vert", "res/shaders/terrain.frag", defines.str().c_str());
+        Material* material = Material::create(TERRAIN_VSH, TERRAIN_FSH, defines.str().c_str());
         if (!material)
             return false;
         material->getStateBlock()->setCullFace(true);
@@ -478,17 +482,15 @@ bool TerrainPatch::updateMaterial()
 
         // Set material parameter bindings
         material->getParameter("u_worldViewProjectionMatrix")->bindValue(_terrain, &Terrain::getWorldViewProjectionMatrix);
-        if (!_terrain->_normalMap)
+        if (_terrain->_normalMap)
+            material->getParameter("u_normalMap")->setValue(_terrain->_normalMap);
+        else
             material->getParameter("u_normalMatrix")->bindValue(_terrain, &Terrain::getNormalMatrix);
         material->getParameter("u_ambientColor")->bindValue(this, &TerrainPatch::getAmbientColor);
         material->getParameter("u_lightColor")->bindValue(this, &TerrainPatch::getLightColor);
         material->getParameter("u_lightDirection")->bindValue(this, &TerrainPatch::getLightDirection);
         if (_layers.size() > 0)
-        {
             material->getParameter("u_samplers")->setValue((const Texture::Sampler**)&_samplers[0], (unsigned int)_samplers.size());
-            if (_terrain->_normalMap)
-                material->getParameter("u_normalMap")->setValue(_terrain->_normalMap);
-        }
 
         if (_terrain->isFlagSet(Terrain::DEBUG_PATCHES))
         {
@@ -516,7 +518,7 @@ void TerrainPatch::draw(bool wireframe)
     BoundingBox bounds = getBoundingBox(true);
 
     // If the box does not intersect the view frustum, cull it
-    if (_terrain->isFlagSet(Terrain::ENABLE_FRUSTUM_CULLING) && !camera->getFrustum().intersects(bounds))
+    if (_terrain->isFlagSet(Terrain::FRUSTUM_CULLING) && !camera->getFrustum().intersects(bounds))
         return;
 
     if (!updateMaterial())
@@ -532,7 +534,7 @@ void TerrainPatch::draw(bool wireframe)
 bool TerrainPatch::isVisible() const
 {
     // If frustum culling is disabled, assume the patch is always visible
-    if ((_terrain->_flags & Terrain::ENABLE_FRUSTUM_CULLING) == 0)
+    if ((_terrain->_flags & Terrain::FRUSTUM_CULLING) == 0)
         return true;
 
     Scene* scene = _terrain->_node ? _terrain->_node->getScene() : NULL;
@@ -559,8 +561,11 @@ unsigned int TerrainPatch::getVisibleTriangleCount() const
 
     // Does the current camera intersect this patch at all?
     BoundingBox bounds = getBoundingBox(true);
-    if (!camera->getFrustum().intersects(bounds))
-        return 0;
+    if (_terrain->_flags & Terrain::FRUSTUM_CULLING)
+    {
+        if (!camera->getFrustum().intersects(bounds))
+            return 0;
+    }
 
     // Return the triangle count of the LOD level depending on the camera
     size_t lod = computeLOD(camera, bounds);
@@ -611,7 +616,7 @@ const Vector3& TerrainPatch::getLightDirection() const
 
 size_t TerrainPatch::computeLOD(Camera* camera, const BoundingBox& worldBounds) const
 {
-    if (!_terrain->isFlagSet(Terrain::ENABLE_LEVEL_OF_DETAIL) || _levels.size() == 0)
+    if (!_terrain->isFlagSet(Terrain::LEVEL_OF_DETAIL) || _levels.size() == 0)
         return 0; // base level
 
     // Compute LOD to use based on very simple distance metric.
@@ -659,6 +664,10 @@ TerrainPatch::Layer::Layer() :
 }
 
 TerrainPatch::Layer::~Layer()
+{
+}
+
+TerrainPatch::Level::Level() : model(NULL)
 {
 }
 

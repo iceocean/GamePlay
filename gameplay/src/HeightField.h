@@ -38,14 +38,12 @@ namespace gameplay
          * pixel, while maxHeight maxHeight is mapped to full intensity pixels.
          *
          * @param path Path to a heightfield image.
-         * @param width Width of the image (required for headerless/RAW files, can be zero for other image formats).
-         * @param height Height of the image (required for headerless/RAW files, can be zero for other image formats).
-         * @param minHeight Minimum height value for a zero intensity pixel.
-         * @param maxHeight Maximum height value for a full intensity heightfield pixel (must be >= minHeight).
+         * @param heightMin Minimum height value for a zero intensity pixel.
+         * @param heightMax Maximum height value for a full intensity heightfield pixel (must be >= minHeight).
          * 
          * @return The new HeightField.
          */
-        static HeightField* createFromImage(const char* path, float minHeight = 0, float maxHeight = 1);
+        static HeightField* createFromImage(const char* path, float heightMin = 0, float heightMax = 1);
 
         /**
          * Creates a HeightField from the specified RAW8 or RAW16 file.
@@ -54,7 +52,7 @@ namespace gameplay
          * or 16-bit (RAW16) format. RAW16 files must have little endian (PC) byte ordering. Since
          * RAW files have no header, you must specify the dimensions of the data in the file.
          * This method automatically determines (based on file size) whether the input file
-         * is RAW8 or RAW16.
+         * is RAW8 or RAW16. RAW files must have a .raw or .r16 file extension.
          *
          * RAW files are commonly used in software that produces heightmap images. Using RAW16 is 
          * preferred or any 8-bit heightfield source since it allows greater precision, resulting in
@@ -64,15 +62,15 @@ namespace gameplay
          * intensity to height values. The minHeight parameter is mapped to zero intensity
          * pixel, while maxHeight maxHeight is mapped to full intensity pixels.
          *
-         * @param path Path to the RAW file.
+         * @param path Path to the RAW file (must end in a .raw or .r16 file extension).
          * @param width Width of the RAW data.
          * @param height Height of the RAW data.
-         * @param minHeight Minimum height value for a zero intensity pixel.
-         * @param maxHeight Maximum height value for a full intensity heightfield pixel (must be >= minHeight).
+         * @param heightMin Minimum height value for a zero intensity pixel.
+         * @param heightMax Maximum height value for a full intensity heightfield pixel (must be >= minHeight).
          * 
          * @return The new HeightField.
          */
-        static HeightField* createFromRAW(const char* path, unsigned int width, unsigned int height, float minHeight = 0, float maxHeight = 1);
+        static HeightField* createFromRAW(const char* path, unsigned int width, unsigned int height, float heightMin = 0, float heightMax = 1);
 
         /**
          * Returns a pointer to the underying height array.
@@ -130,7 +128,7 @@ namespace gameplay
         /**
          * Internal method for creating a HeightField.
          */
-        static HeightField* create(const char* path, unsigned int width, unsigned int height, float minHeight, float maxHeight);
+        static HeightField* create(const char* path, unsigned int width, unsigned int height, float heightMin, float heightMax);
 
         float* _array;
         unsigned int _cols;

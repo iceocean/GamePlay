@@ -17,7 +17,7 @@ static const float MOVE_SPEED = 15.0f;
 static const float UP_DOWN_SPEED = 10.0f;
 
 Audio3DTest::Audio3DTest()
-    : _font(NULL), _scene(NULL), _cubeNode(NULL), _gamepad(NULL), _virtualGamepad(NULL), _physicalGamepad(NULL), _moveFlags(0), _prevX(0), _prevY(0), _buttonPressed(false)
+    : _font(NULL), _scene(NULL), _cubeNode(NULL), _gamepad(NULL), _moveFlags(0), _prevX(0), _prevY(0), _buttonPressed(false)
 {
 }
 
@@ -60,23 +60,11 @@ void Audio3DTest::initialize()
     _scene->addNode(_fpCamera.getRootNode());
     _scene->setActiveCamera(_fpCamera.getCamera());
 
-    std::vector<Gamepad*>* gamepads = Gamepad::getGamepads();
-    std::vector<Gamepad*>::iterator it;
-    for (it = gamepads->begin(); it != gamepads->end(); it++)
-    {
-        Gamepad* gamepad = *it;
-        if (gamepad->isVirtual())
-            _virtualGamepad = gamepad;
-        else if (!_physicalGamepad)
-        {
-            _physicalGamepad = gamepad;
-        }
-    }
-
-    if (_physicalGamepad)
-        _gamepad = _physicalGamepad;
-    else
-        _gamepad = _virtualGamepad;
+    _gamepad = getGamepad(0);
+    // This is needed because the virtual gamepad is shared between all tests.
+    // TestsGame always ensures the virtual gamepad is disabled when a test is exited.
+    if (_gamepad && _gamepad->isVirtual())
+        _gamepad->getForm()->setEnabled(true);
 }
 
 void Audio3DTest::finalize()
@@ -133,6 +121,12 @@ void Audio3DTest::update(float elapsedTime)
     {
         _gamepad->getJoystickValues(0, &move);
         move.x = -move.x;
+    }
+    if (_gamepad->getJoystickCount() > 1)
+    {
+        Vector2 joy2;
+        _gamepad->getJoystickValues(1, &joy2);
+        _fpCamera.rotate(MATH_DEG_TO_RAD(joy2.x * 2.0f), MATH_DEG_TO_RAD(joy2.y * 2.0f));
     }
 
     if (!move.isZero())
@@ -354,31 +348,12 @@ void Audio3DTest::gamepadEvent(Gamepad::GamepadEvent evt, Gamepad* gamepad)
     switch(evt)
     {
     case Gamepad::CONNECTED_EVENT:
-        if (gamepad->isVirtual())
-        {
-            gamepad->getForm()->setConsumeInputEvents(false);
-            _virtualGamepad = gamepad;
-        }
-        else
-        {
-            _physicalGamepad = gamepad;
-        }
-
-        if (_physicalGamepad)
-        {
-            _gamepad = _physicalGamepad;
-        }
-        else
-        {
-            _gamepad = _virtualGamepad;
-        }
-
-        break;
     case Gamepad::DISCONNECTED_EVENT:
-        if (gamepad == _physicalGamepad)
-        {
-            _gamepad = _virtualGamepad;
-        }
+        _gamepad = getGamepad(0);
+        // This is needed because the virtual gamepad is shared between all tests.
+        // TestsGame always ensures the virtual gamepad is disabled when a test is exited.
+        if (_gamepad && _gamepad->isVirtual())
+            _gamepad->getForm()->setEnabled(true);
         break;
     }
 }

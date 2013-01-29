@@ -2,6 +2,7 @@
 #include "Gamepad.h"
 #include "Game.h"
 #include "Button.h"
+#include "Platform.h"
 
 namespace gameplay
 {
@@ -9,13 +10,13 @@ namespace gameplay
 static std::vector<Gamepad*> __gamepads;
 
 Gamepad::Gamepad(const char* formPath)
-    : _id(""), _handle(0), _vendorId(0), _productId(0), _buttonCount(0), _joystickCount(0), _triggerCount(0), _form(NULL)
+    : _handle((GamepadHandle)INT_MAX), _buttonCount(0), _joystickCount(0), _triggerCount(0), _vendorId(0), _productId(0),
+      _form(NULL), _buttons(0)
 {
     GP_ASSERT(formPath);
     _form = Form::create(formPath);
     GP_ASSERT(_form);
     _form->setConsumeInputEvents(false);
-    _id = _form->getId();
     _vendorString = "None";
     _productString = "Virtual";
 
@@ -32,10 +33,11 @@ Gamepad::Gamepad(const char* formPath)
     bindGamepadControls(_form);
 }
 
-Gamepad::Gamepad(const char* id, GamepadHandle handle, unsigned int buttonCount, unsigned int joystickCount, unsigned int triggerCount,
-                 unsigned int vendorId, unsigned int productId, char* vendorString, char* productString)
-    : _id(id), _handle(handle), _vendorId(vendorId), _productId(productId), _vendorString(vendorString), _productString(productString),
-      _buttonCount(buttonCount), _joystickCount(joystickCount), _triggerCount(triggerCount), _form(NULL)
+Gamepad::Gamepad(GamepadHandle handle, unsigned int buttonCount, unsigned int joystickCount, unsigned int triggerCount,
+                 unsigned int vendorId, unsigned int productId, const char* vendorString, const char* productString)
+    : _handle(handle), _buttonCount(buttonCount), _joystickCount(joystickCount), _triggerCount(triggerCount),
+      _vendorId(vendorId), _productId(productId), _vendorString(vendorString), _productString(productString),
+      _form(NULL), _buttons(0)
 {
 }
 
@@ -47,10 +49,11 @@ Gamepad::~Gamepad()
     }
 }
 
-Gamepad* Gamepad::add(const char* id, GamepadHandle handle, unsigned int buttonCount, unsigned int joystickCount, unsigned int triggerCount,
-    unsigned int vendorId, unsigned int productId, char* vendorString, char* productString)
+Gamepad* Gamepad::add(GamepadHandle handle, unsigned int buttonCount, unsigned int joystickCount, unsigned int triggerCount,
+                      unsigned int vendorId, unsigned int productId, 
+                      const char* vendorString, const char* productString)
 {
-    Gamepad* gamepad = new Gamepad(id, handle, buttonCount, joystickCount, triggerCount, vendorId, productId, vendorString, productString);
+    Gamepad* gamepad = new Gamepad(handle, buttonCount, joystickCount, triggerCount, vendorId, productId, vendorString, productString);
 
     __gamepads.push_back(gamepad);
     Game::getInstance()->gamepadEvent(CONNECTED_EVENT, gamepad);
@@ -74,8 +77,9 @@ void Gamepad::remove(GamepadHandle handle)
         Gamepad* gamepad = *it;
         if (gamepad->_handle == handle)
         {
-            Game::getInstance()->gamepadEvent(DISCONNECTED_EVENT, gamepad);
             it = __gamepads.erase(it);
+            Game::getInstance()->gamepadEvent(DISCONNECTED_EVENT, gamepad);
+            SAFE_DELETE(gamepad);
         }
         else
         {
@@ -92,8 +96,9 @@ void Gamepad::remove(Gamepad* gamepad)
         Gamepad* g = *it;
         if (g == gamepad)
         {
-            Game::getInstance()->gamepadEvent(DISCONNECTED_EVENT, g);
             it = __gamepads.erase(it);
+            Game::getInstance()->gamepadEvent(DISCONNECTED_EVENT, g);
+            SAFE_DELETE(gamepad);
         }
         else
         {
@@ -127,28 +132,45 @@ void Gamepad::bindGamepadControls(Container* container)
             Button* button = (Button*)control;
             _uiButtons[button->getDataBinding()] = button;
             _buttonCount++;
-        }   
+        }
     }
 }
 
-Gamepad* Gamepad::getGamepad(GamepadHandle handle)
+unsigned int Gamepad::getGamepadCount()
 {
-    std::vector<Gamepad*>::const_iterator it;
-    for (it = __gamepads.begin(); it != __gamepads.end(); it++)
+    return __gamepads.size();
+}
+
+Gamepad* Gamepad::getGamepad(unsigned int index, bool preferPhysical)
+{
+    unsigned int count = __gamepads.size();
+    if (index >= count)
+        return NULL;
+
+    if (!preferPhysical)
+        return __gamepads[index];
+
+    // Virtual gamepads are guaranteed to come before physical gamepads in the vector.
+    Gamepad* backupVirtual = NULL;
+    if (index < count && __gamepads[index]->isVirtual())
     {
-        Gamepad* gamepad = *it;
-        if (!gamepad->isVirtual() && gamepad->_handle == handle)
+        backupVirtual = __gamepads[index];
+    }
+
+    for (unsigned int i = 0; i < count; ++i)
+    {
+        if (!__gamepads[i]->isVirtual())
         {
-            return gamepad;
+            // __gamepads[i] is the first physical gamepad 
+            // and should be returned from getGamepad(0, true).
+            if (index + i < count)
+            {
+                return __gamepads[index + i];
+            }
         }
     }
 
-    return NULL;
-}
-
-std::vector<Gamepad*>* Gamepad::getGamepads()
-{
-    return &__gamepads;
+    return backupVirtual;
 }
 
 Gamepad::ButtonMapping Gamepad::getButtonMappingFromString(const char* string)
@@ -198,11 +220,6 @@ Gamepad::ButtonMapping Gamepad::getButtonMappingFromString(const char* string)
     return BUTTON_A;
 }
 
-const char* Gamepad::getId() const
-{
-    return _id.c_str();
-}
-
 const unsigned int Gamepad::getVendorId() const
 {
     return _vendorId;
@@ -225,9 +242,12 @@ const char* Gamepad::getProductString() const
 
 void Gamepad::update(float elapsedTime)
 {
-    if (_form && _form->isEnabled())
+    if (_form)
     {
-        _form->update(elapsedTime);
+        if (_form->isEnabled())
+        {
+            _form->update(elapsedTime);
+        }
     }
     else
     {

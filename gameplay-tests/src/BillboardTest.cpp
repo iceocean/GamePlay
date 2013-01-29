@@ -18,14 +18,14 @@ static const float UP_DOWN_SPEED = 1.0f;
 
 static const float GROUND_WIDTH = 4.0f;
 static const float GROUND_HEIGHT = 4.0f;
-static const float GROUND_REPEAT_TEXTURE = 10.0f;
+static const float GROUND_REPEAT_TEXTURE = 30.0f;
 
 static const float BILLBOARD_WIDTH = 0.5f;
 static const float BILLBOARD_HEIGHT = 0.5f;
-static const unsigned int BILLBOARD_COUNT = 200;
+static const unsigned int BILLBOARD_COUNT = 300;
 
 BillboardTest::BillboardTest()
-    : _font(NULL), _scene(NULL), _ground(NULL), _gamepad(NULL), _virtualGamepad(NULL), _physicalGamepad(NULL), _moveFlags(0), _prevX(0), _prevY(0), _buttonPressed(false)
+    : _font(NULL), _scene(NULL), _ground(NULL), _gamepad(NULL), _moveFlags(0), _prevX(0), _prevY(0), _buttonPressed(false)
 {
 }
 
@@ -50,36 +50,24 @@ void BillboardTest::initialize()
     // Load billboards
     loadBillboards();
 
-    std::vector<Gamepad*>* gamepads = Gamepad::getGamepads();
-    std::vector<Gamepad*>::iterator it;
-    for (it = gamepads->begin(); it != gamepads->end(); it++)
-    {
-        Gamepad* gamepad = *it;
-        if (gamepad->isVirtual())
-            _virtualGamepad = gamepad;
-        else if (!_physicalGamepad)
-        {
-            _physicalGamepad = gamepad;
-        }
-    }
-
-    if (_physicalGamepad)
-        _gamepad = _physicalGamepad;
-    else
-        _gamepad = _virtualGamepad;
+    _gamepad = getGamepad(0);
+    // This is needed because the virtual gamepad is shared between all tests.
+    // TestsGame always ensures the virtual gamepad is disabled when a test is exited.
+    if (_gamepad && _gamepad->isVirtual())
+        _gamepad->getForm()->setEnabled(true);
 }
 
 void BillboardTest::finalize()
 {
-    SAFE_RELEASE(_scene);
-    SAFE_RELEASE(_font);
-	SAFE_RELEASE(_ground);
 	for (std::vector<Node*>::iterator it = _billboards.begin(); it != _billboards.end(); ++it)
     {
         Node* node = *it;
 		node->release();
     }
     _billboards.clear();
+    SAFE_RELEASE(_scene);
+    SAFE_RELEASE(_font);
+	SAFE_RELEASE(_ground);
 }
 
 void BillboardTest::update(float elapsedTime)
@@ -134,6 +122,12 @@ void BillboardTest::update(float elapsedTime)
         _gamepad->getJoystickValues(0, &move);
         move.x = -move.x;
     }
+    if (_gamepad->getJoystickCount() > 1)
+    {
+        Vector2 joy2;
+        _gamepad->getJoystickValues(1, &joy2);
+        _camera.rotate(MATH_DEG_TO_RAD(joy2.x * 2.0f), MATH_DEG_TO_RAD(joy2.y * 2.0f));
+    }
 
     if (!move.isZero())
     {
@@ -153,7 +147,6 @@ void BillboardTest::render(float elapsedTime)
 
 	// Get the scene camera
 	Camera* camera = _scene->getActiveCamera();
-
 
 	for (unsigned int i = 0; i < BILLBOARD_COUNT; i++)
 	{
@@ -303,6 +296,7 @@ void BillboardTest::loadGround()
 	_ground->setMaterial(material);
 	SAFE_RELEASE(material);
 	SAFE_RELEASE(effect)
+    SAFE_RELEASE(node);
 }
 
 void BillboardTest::loadBillboards()
@@ -319,7 +313,7 @@ void BillboardTest::loadBillboards()
 		Model* model = Model::create(mesh);
 		node->setModel(model);
 		_scene->addNode(node);
- 
+        
 		Material* material = Material::create(effect); 
 		material->getStateBlock()->setDepthTest(true);
 		material->getStateBlock()->setBlend(false);
@@ -335,7 +329,6 @@ void BillboardTest::loadBillboards()
         node->translate(tx, (BILLBOARD_HEIGHT / 2.0f), tz);
 
         _billboards.push_back(node);
-
     }
 	SAFE_RELEASE(effect);
 	SAFE_RELEASE(mesh);
@@ -346,31 +339,12 @@ void BillboardTest::gamepadEvent(Gamepad::GamepadEvent evt, Gamepad* gamepad)
     switch(evt)
     {
     case Gamepad::CONNECTED_EVENT:
-        if (gamepad->isVirtual())
-        {
-            gamepad->getForm()->setConsumeInputEvents(false);
-            _virtualGamepad = gamepad;
-        }
-        else
-        {
-            _physicalGamepad = gamepad;
-        }
-
-        if (_physicalGamepad)
-        {
-            _gamepad = _physicalGamepad;
-        }
-        else
-        {
-            _gamepad = _virtualGamepad;
-        }
-
-        break;
     case Gamepad::DISCONNECTED_EVENT:
-        if (gamepad == _physicalGamepad)
-        {
-            _gamepad = _virtualGamepad;
-        }
+        _gamepad = getGamepad(0);
+        // This is needed because the virtual gamepad is shared between all tests.
+        // TestsGame always ensures the virtual gamepad is disabled when a test is exited.
+        if (_gamepad && _gamepad->isVirtual())
+            _gamepad->getForm()->setEnabled(true);
         break;
     }
 }

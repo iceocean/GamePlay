@@ -19,6 +19,7 @@ Test::Test()
 
 Test::~Test()
 {
+	enableScriptCamera(false);
 }
 
 bool Test::isVsync()
@@ -126,6 +127,11 @@ PhysicsController* Test::getPhysicsController() const
     return Game::getInstance()->getPhysicsController();
 }
 
+ScriptController* Test::getScriptController() const
+{
+	return Game::getInstance()->getScriptController();
+}
+
 void Test::displayKeyboard(bool display)
 {
     Game::getInstance()->displayKeyboard(display);
@@ -166,7 +172,7 @@ void Test::setMultiTouch(bool enabled)
 
 bool Test::isMultiTouch() const
 {
-    return Platform::isMultiTouch();
+    return Game::getInstance()->isMultiTouch();
 }
 
 void Test::getAccelerometerValues(float* pitch, float* roll)
@@ -177,6 +183,16 @@ void Test::getAccelerometerValues(float* pitch, float* roll)
 void Test::schedule(long timeOffset, TimeListener* timeListener, void* cookie)
 {
     Game::getInstance()->schedule(timeOffset, timeListener, cookie);
+}
+
+void Test::enableScriptCamera(bool enable)
+{
+	Game::getInstance()->getScriptController()->executeFunction<void>("camera_setActive", "b", enable);
+}
+
+void Test::setScriptCameraSpeed(float normal, float fast)
+{
+    Game::getInstance()->getScriptController()->executeFunction<void>("camera_setSpeed", "ff", normal, fast);
 }
 
 bool Test::isGestureSupported(Gesture::GestureEvent evt)
@@ -213,6 +229,16 @@ void Test::gestureTapEvent(int x, int y)
 
 void Test::gamepadEvent(Gamepad::GamepadEvent evt, Gamepad* gamepad)
 {
+}
+
+unsigned int Test::getGamepadCount() const
+{
+    return Game::getInstance()->getGamepadCount();
+}
+
+Gamepad* Test::getGamepad(unsigned int index) const
+{
+    return Game::getInstance()->getGamepad(index);
 }
 
 void Test::drawFrameRate(Font* font, const Vector4& color, unsigned int x, unsigned int y, unsigned int fps)
