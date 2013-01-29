@@ -35,16 +35,20 @@ public:
     class Compositor
     {
     public:
-		
+
         static Compositor* create(FrameBuffer* srcBuffer, FrameBuffer* dstBuffer, const char* materialPath, const char* techniqueId);
 
         ~Compositor();
+
+        FrameBuffer* getSrcFrameBuffer() const;
+
+        FrameBuffer* getDstFrameBuffer() const;
 
         const char* getTechniqueId() const;
 
         Material* getMaterial() const;
 
-        void blit(const Rectangle& dst, bool clearBuffer, const Vector4& clearColor = Vector4::zero());
+        void blit(const Rectangle& dst);
 
     private:
 
@@ -82,6 +86,9 @@ private:
     FrameBuffer* _frameBuffer;
     unsigned int _compositorIndex;
     std::vector<Compositor*> _compositors;
+    static  Model* _quadModel;
+    static  Material* _compositorMaterial;
+
 };
 
 #endif

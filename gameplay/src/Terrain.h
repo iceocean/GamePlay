@@ -1,15 +1,18 @@
 #ifndef TERRAIN_H_
 #define TERRAIN_H_
 
-#include "TerrainPatch.h"
 #include "Transform.h"
 #include "Properties.h"
 #include "HeightField.h"
+#include "Texture.h"
+#include "BoundingBox.h"
+#include "TerrainPatch.h"
 
 namespace gameplay
 {
 
 class Node;
+class TerrainPatch;
 
 /**
  * Defines a Terrain that is capable of rendering large landscapes from 2D heightmap images.
@@ -21,7 +24,8 @@ class Node;
  * 2. 24-bit high precision heightmap image (PNG), which can be generated from a mesh using
  *    gameplay-encoder.
  * 3. 8-bit or 16-bit RAW heightmap image using PC byte ordering (little endian), which is
- *    compatible with many external tools such as World Machine, Unity and more.
+ *    compatible with many external tools such as World Machine, Unity and more. The file
+ *    extension must be either .raw or .r16 for RAW files.
  *
  * Physics/collision is supported by setting a rigid body collision object on the Node that
  * the terrain is attached to. The collision shape should be specified using
@@ -98,7 +102,7 @@ public:
          * Frustum culling uses the scene's active camera. The terrain must be attached
          * to a node that is within a scene for this to work.
          */
-        ENABLE_FRUSTUM_CULLING = 2,
+        FRUSTUM_CULLING = 2,
 
          /**
           * Enables level of detail (on by default).
@@ -107,7 +111,7 @@ public:
           * "detailLevels" was not set to a value greater than 1 in the terrain
           * properties file at creation time.
           */
-         ENABLE_LEVEL_OF_DETAIL = 8
+         LEVEL_OF_DETAIL = 8
     };
 
     /**
@@ -149,7 +153,7 @@ public:
      *      physics hegihtfield is scaled by this amount. Pass Vector3::one() to use the exact dimensions and heights
      *      in the supplied height array.
      * @param patchSize Size of terrain patches (number of quads).
-     * @param detailLevel Number of detail levels to generate for the terrain (a value of one generates only the base
+     * @param detailLevels Number of detail levels to generate for the terrain (a value of one generates only the base
      *      level, resulting in no LOD at runtime.
      * @param skirtScale A positive value indicates that vertical skirts should be generated at the specified
      *      scale, which is relative to the height of the terrain. For example, a value of 0.5f indicates that
@@ -160,10 +164,8 @@ public:
      * @return A new Terrain.
      * @script{create}
      */
-    static Terrain* create(HeightField* heightfield,
-        const Vector3& scale = Vector3::one(), unsigned int patchSize = 32,
-        unsigned int detailLevels = 1, float skirtScale = 0.0f,
-        const char* normalMapPath = NULL);
+    static Terrain* create(HeightField* heightfield, const Vector3& scale = Vector3::one(), unsigned int patchSize = 32,  
+                           unsigned int detailLevels = 1, float skirtScale = 0.0f, const char* normalMapPath = NULL);
 
     /**
      * Sets the detail textures information for a terrain layer.
@@ -202,9 +204,9 @@ public:
      * @script{ignore}
      */
     bool setLayer(int index,
-        const char* texturePath, const Vector2& textureRepeat = Vector2::one(),
-        const char* blendPath = NULL, int blendChannel = 0,
-        int row = -1, int column = -1);
+                  const char* texturePath, const Vector2& textureRepeat = Vector2::one(),
+                  const char* blendPath = NULL, int blendChannel = 0, 
+                  int row = -1, int column = -1);
 
     /**
      * Returns the node that this terrain is bound to.
@@ -352,6 +354,11 @@ private:
     const Matrix& getNormalMatrix() const;
 
     /**
+     * Returns the world view matrix for the terrain, factoring in terrain local scaling.
+     */
+    const Matrix& getWorldViewMatrix() const;
+
+    /**
      * Returns the world view projection matrix for the terrain, factoring in terrain local scaling.
      */
     const Matrix& getWorldViewProjectionMatrix() const;
@@ -367,7 +374,6 @@ private:
     mutable Matrix _normalMatrix;
     mutable unsigned int _dirtyFlags;
     BoundingBox _boundingBox;
-
 };
 
 }

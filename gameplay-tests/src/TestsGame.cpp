@@ -10,7 +10,7 @@ std::vector<TestsGame::TestRecordList>* TestsGame::_tests = NULL;
 TestsGame game;
 
 TestsGame::TestsGame()
-    : _font(NULL), _activeTest(NULL), _testSelectForm(NULL)
+    : _activeTest(NULL), _font(NULL),  _testSelectForm(NULL)
 {
 }
 
@@ -22,6 +22,9 @@ void TestsGame::initialize()
     {
         std::sort((*_tests)[i].begin(), (*_tests)[i].end());
     }
+
+    // Load camera script
+    getScriptController()->loadScript("res/common/camera.lua");
 
     // Construct a form for selecting which test to run.
     Theme* theme = Theme::create("res/common/default.theme");
@@ -64,7 +67,19 @@ void TestsGame::initialize()
             testButton->release();
         }
     }
-	_testSelectForm->setState(Control::FOCUS);
+    _testSelectForm->setState(Control::FOCUS);
+
+    // Disable virtual gamepads.
+    unsigned int gamepadCount = getGamepadCount();
+
+    for (unsigned int i = 0; i < gamepadCount; i++)
+    {
+        Gamepad* gamepad = getGamepad(i, false);
+        if (gamepad->isVirtual())
+        {
+            gamepad->getForm()->setEnabled(false);
+        }
+    }
 }
 
 void TestsGame::finalize()
@@ -82,6 +97,7 @@ void TestsGame::update(float elapsedTime)
 {
     if (_activeTest)
     {
+        getScriptController()->executeFunction<void>("camera_update", "f", elapsedTime);
         _activeTest->update(elapsedTime);
         return;
     }
@@ -116,6 +132,7 @@ void TestsGame::touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int con
         }
         else
         {
+            getScriptController()->executeFunction<void>("camera_touchEvent", "[Touch::TouchEvent]iiui", evt, x, y, contactIndex);
             _activeTest->touchEvent(evt, x, y, contactIndex);
         }
         return;
@@ -133,6 +150,7 @@ void TestsGame::keyEvent(Keyboard::KeyEvent evt, int key)
         }
         else
         {
+            getScriptController()->executeFunction<void>("camera_keyEvent", "[Keyboard::KeyEvent][Keyboard::Key]", evt, key);
             _activeTest->keyEvent(evt, key);
         }
         return;
@@ -219,6 +237,12 @@ void TestsGame::runTest(void* func)
 
 void TestsGame::exitActiveTest()
 {
+    Gamepad* virtualGamepad = getGamepad(0, false);
+    if (virtualGamepad && virtualGamepad->isVirtual())
+    {
+        virtualGamepad->getForm()->setEnabled(false);
+    }
+
     if (_activeTest)
     {
         _activeTest->finalize();
@@ -226,6 +250,7 @@ void TestsGame::exitActiveTest()
 
         _testSelectForm->setEnabled(true);
     }
+
     // Reset some game options
     setMultiTouch(false);
 }

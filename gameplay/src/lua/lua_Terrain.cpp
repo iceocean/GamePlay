@@ -11,6 +11,7 @@
 #include "ScriptController.h"
 #include "ScriptTarget.h"
 #include "Terrain.h"
+#include "TerrainPatch.h"
 #include "Transform.h"
 #include "lua_CurveInterpolationType.h"
 #include "lua_TerrainFlags.h"
@@ -614,7 +615,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -642,7 +643,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -670,7 +671,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -711,7 +712,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -756,7 +757,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -805,7 +806,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -858,7 +859,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }
@@ -915,7 +916,7 @@ int lua_Terrain_static_create(lua_State* state)
                     {
                         ScriptUtil::LuaObject* object = (ScriptUtil::LuaObject*)lua_newuserdata(state, sizeof(ScriptUtil::LuaObject));
                         object->instance = returnPtr;
-                        object->owns = false;
+                        object->owns = true;
                         luaL_getmetatable(state, "Terrain");
                         lua_setmetatable(state, -2);
                     }

@@ -11,15 +11,15 @@
 const static unsigned int __formsCount = 5;
 
 FormsTest::FormsTest()
-    : _scene(NULL), _formNode(NULL), _formNodeParent(NULL), _formSelect(NULL), _activeForm(NULL), _gamepad(NULL), _virtualGamepad(NULL), _physicalGamepad(NULL), _keyFlags(0)
+    : _scene(NULL), _formNode(NULL), _formNodeParent(NULL), _formSelect(NULL), _activeForm(NULL), _gamepad(NULL), _keyFlags(0)
 {
     const char* formFiles[] = 
     {
-        "res/common/formBasicControls.form",
-        "res/common/formScrolling.form",
-        "res/common/formFlowLayout.form",
-        "res/common/formVerticalLayout.form",
-        "res/common/formZOrder.form",
+        "res/common/forms/formBasicControls.form",
+        "res/common/forms/formScrolling.form",
+        "res/common/forms/formFlowLayout.form",
+        "res/common/forms/formVerticalLayout.form",
+        "res/common/forms/formZOrder.form",
     };
 
     _formFiles.assign(formFiles, formFiles + __formsCount);
@@ -74,7 +74,7 @@ void FormsTest::initialize()
     setMultiTouch(true);
     setVsync(false);
 
-    _formSelect = Form::create("res/common/formSelect.form");
+    _formSelect = Form::create("res/common/forms/formSelect.form");
     
     RadioButton* form0Button = static_cast<RadioButton*>(_formSelect->getControl("form0"));
     form0Button->addListener(this, Control::Listener::CLICK);
@@ -120,23 +120,11 @@ void FormsTest::initialize()
     
     formChanged();
 
-    std::vector<Gamepad*>* gamepads = Gamepad::getGamepads();
-    std::vector<Gamepad*>::iterator it;
-    for (it = gamepads->begin(); it != gamepads->end(); it++)
-    {
-        Gamepad* gamepad = *it;
-        if (gamepad->isVirtual())
-            _virtualGamepad = gamepad;
-        else if (!_physicalGamepad)
-        {
-            _physicalGamepad = gamepad;
-        }
-    }
-
-    if (_physicalGamepad)
-        _gamepad = _physicalGamepad;
-    else
-        _gamepad = _virtualGamepad;
+    _gamepad = getGamepad(0);
+    // This is needed because the virtual gamepad is shared between all tests.
+    // TestsGame always ensures the virtual gamepad is disabled when a test is exited.
+    if (_gamepad && _gamepad->isVirtual())
+        _gamepad->getForm()->setEnabled(true);
 }
 
 void FormsTest::formChanged()
@@ -200,6 +188,17 @@ void FormsTest::update(float elapsedTime)
     if (_gamepad->getJoystickCount() > 0)
     {
         _gamepad->getJoystickValues(0, &joyCommand);
+    }
+    if (_gamepad->getJoystickCount() > 1)
+    {
+        Vector2 joy2;
+        _gamepad->getJoystickValues(1, &joy2);
+        Matrix m;
+        _formNodeParent->getWorldMatrix().transpose(&m);
+        Vector3 yaw;
+        m.getUpVector(&yaw);
+        _formNodeParent->rotate(yaw, speedFactor * joy2.x * 2.0f);
+        _formNodeParent->rotateX(-speedFactor * joy2.y * 2.0f);
     }
 
     if (bDown)
@@ -386,31 +385,12 @@ void FormsTest::gamepadEvent(Gamepad::GamepadEvent evt, Gamepad* gamepad)
     switch(evt)
     {
     case Gamepad::CONNECTED_EVENT:
-        if (gamepad->isVirtual())
-        {
-            gamepad->getForm()->setConsumeInputEvents(false);
-            _virtualGamepad = gamepad;
-        }
-        else
-        {
-            _physicalGamepad = gamepad;
-        }
-
-        if (_physicalGamepad)
-        {
-            _gamepad = _physicalGamepad;
-        }
-        else
-        {
-            _gamepad = _virtualGamepad;
-        }
-
-        break;
     case Gamepad::DISCONNECTED_EVENT:
-        if (gamepad == _physicalGamepad)
-        {
-            _gamepad = _virtualGamepad;
-        }
+        _gamepad = getGamepad(0);
+        // This is needed because the virtual gamepad is shared between all tests.
+        // TestsGame always ensures the virtual gamepad is disabled when a test is exited.
+        if (_gamepad && _gamepad->isVirtual())
+            _gamepad->getForm()->setEnabled(true);
         break;
     }
 }

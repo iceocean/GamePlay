@@ -730,7 +730,7 @@ void luaRegister_lua_Global()
         ScriptUtil::registerConstantString("BLEND_ZERO", "BLEND_ZERO", scopePath);
         ScriptUtil::registerConstantString("BLEND_ONE", "BLEND_ONE", scopePath);
         ScriptUtil::registerConstantString("BLEND_SRC_COLOR", "BLEND_SRC_COLOR", scopePath);
-        ScriptUtil::registerConstantString("BLEN_ONE_MINUS_SRC_COLOR", "BLEN_ONE_MINUS_SRC_COLOR", scopePath);
+        ScriptUtil::registerConstantString("BLEND_ONE_MINUS_SRC_COLOR", "BLEND_ONE_MINUS_SRC_COLOR", scopePath);
         ScriptUtil::registerConstantString("BLEND_DST_COLOR", "BLEND_DST_COLOR", scopePath);
         ScriptUtil::registerConstantString("BLEND_ONE_MINUS_DST_COLOR", "BLEND_ONE_MINUS_DST_COLOR", scopePath);
         ScriptUtil::registerConstantString("BLEND_SRC_ALPHA", "BLEND_SRC_ALPHA", scopePath);
@@ -769,8 +769,8 @@ void luaRegister_lua_Global()
         std::vector<std::string> scopePath;
         scopePath.push_back("Terrain");
         ScriptUtil::registerConstantString("DEBUG_PATCHES", "DEBUG_PATCHES", scopePath);
-        ScriptUtil::registerConstantString("ENABLE_FRUSTUM_CULLING", "ENABLE_FRUSTUM_CULLING", scopePath);
-        ScriptUtil::registerConstantString("ENABLE_LEVEL_OF_DETAIL", "ENABLE_LEVEL_OF_DETAIL", scopePath);
+        ScriptUtil::registerConstantString("FRUSTUM_CULLING", "FRUSTUM_CULLING", scopePath);
+        ScriptUtil::registerConstantString("LEVEL_OF_DETAIL", "LEVEL_OF_DETAIL", scopePath);
     }
 
     // Register enumeration Texture::Filter.

@@ -36,6 +36,7 @@ static HDC __hdc = 0;
 static HGLRC __hrc = 0;
 static bool __mouseCaptured = false;
 static POINT __mouseCapturePoint = { 0, 0 };
+static bool __multiSampling = false;
 static bool __cursorVisible = true;
 static unsigned int __gamepadsConnected = 0;
 
@@ -47,6 +48,7 @@ static const unsigned int XINPUT_TRIGGER_COUNT = 2;
 
 #ifdef USE_XINPUT
 static XINPUT_STATE __xInputState;
+static bool __connectedXInput[4];
 
 static float normalizeXInputJoystickAxis(int axisValue, int deadZone)
 {
@@ -353,6 +355,7 @@ LRESULT CALLBACK __WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_DESTROY:
+        gameplay::Platform::shutdownInternal();
         PostQuitMessage(0);
         return 0;
 
@@ -661,6 +664,8 @@ bool initializeGL(WindowCreationParams* params)
         WGL_STENCIL_BITS_ARB, DEFAULT_STENCIL_BUFFER_SIZE,
         0
     };
+    __multiSampling = params->samples > 0;
+
     UINT numFormats;
     if (!wglChoosePixelFormatARB(hdc, attribList, NULL, 1, &pixelFormat, &numFormats) || numFormats == 0)
     {
@@ -680,6 +685,8 @@ bool initializeGL(WindowCreationParams* params)
                     break;
                 }
             }
+
+            __multiSampling = params->samples > 0;
         }
 
         if (!valid)
@@ -910,11 +917,13 @@ Platform* Platform::create(Game* game, void* attachToWindow)
     {
         if (XInputGetState(i, &__xInputState) == NO_ERROR)
         {
-            // Gamepad is connected.
-            char id[9];
-            sprintf(id, "XInput %d", i);
-            Gamepad::add(id, i, XINPUT_BUTTON_COUNT, XINPUT_JOYSTICK_COUNT, XINPUT_TRIGGER_COUNT,
-                         0, 0, "Unknown", "XInput Gamepad");
+            if (!__connectedXInput[i])
+            {
+                // Gamepad is connected.
+                Platform::gamepadEventConnectedInternal(i, XINPUT_BUTTON_COUNT, XINPUT_JOYSTICK_COUNT, XINPUT_TRIGGER_COUNT, 0, 0, "Microsoft", "XBox360 Controller");
+                __connectedXInput[i] = true;
+            }
+
         }
     }
 #endif
@@ -963,7 +972,7 @@ int Platform::enterMessagePump()
 
             if (msg.message == WM_QUIT)
             {
-                _game->exit();
+                gameplay::Platform::shutdownInternal();
                 return msg.wParam;
             }
         }
@@ -973,13 +982,17 @@ int Platform::enterMessagePump()
             // Check for connected XInput gamepads.
             for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
             {
-                if (XInputGetState(i, &__xInputState) == NO_ERROR && !Gamepad::getGamepad(i))
+                if (XInputGetState(i, &__xInputState) == NO_ERROR && !__connectedXInput[i])
                 {
                     // Gamepad was just connected.
-                    char id[9];
-                    sprintf(id, "XInput %d", i);
-                    Gamepad::add(id, i, XINPUT_BUTTON_COUNT, XINPUT_JOYSTICK_COUNT, XINPUT_TRIGGER_COUNT,
-                                    0, 0, "Unknown", "XInput Gamepad");
+                    Platform::gamepadEventConnectedInternal(i, XINPUT_BUTTON_COUNT, XINPUT_JOYSTICK_COUNT, XINPUT_TRIGGER_COUNT, 0, 0, "Microsoft", "XBox360 Controller");
+                    __connectedXInput[i] = true;
+                }
+                else if (XInputGetState(i, &__xInputState) != NO_ERROR && __connectedXInput[i])
+                {
+                    // Gamepad was just disconnected.
+                    __connectedXInput[i] = false;
+                    Platform::gamepadEventDisconnectedInternal(i);
                 }
             }
 #endif
@@ -1054,6 +1067,30 @@ void Platform::swapBuffers()
 void Platform::sleep(long ms)
 {
     Sleep(ms);
+}
+
+void Platform::setMultiSampling(bool enabled)
+{
+    if (enabled == __multiSampling)
+    {
+        return;
+    }
+
+    if (enabled)
+    {
+        glEnable(GL_MULTISAMPLE);
+    }
+    else
+    {
+        glDisable(GL_MULTISAMPLE);
+    }
+
+    __multiSampling = enabled;
+}
+
+bool Platform::isMultiSampling()
+{
+    return __multiSampling;
 }
 
 void Platform::setMultiTouch(bool enabled)
@@ -1231,11 +1268,6 @@ void Platform::pollGamepadState(Gamepad* gamepad)
             }
         }
     }
-    else
-    {
-        // Gamepad was disconnected.
-        Gamepad::remove(gamepad);
-    }
 }
 #else
 void Platform::pollGamepadState(Gamepad* gamepad)
@@ -1276,6 +1308,22 @@ bool Platform::mouseEventInternal(Mouse::MouseEvent evt, int x, int y, int wheel
     {
         return Game::getInstance()->getScriptController()->mouseEvent(evt, x, y, wheelDelta);
     }
+}
+
+void Platform::gamepadEventConnectedInternal(GamepadHandle handle,  unsigned int buttonCount, unsigned int joystickCount, unsigned int triggerCount,
+                                             unsigned int vendorId, unsigned int productId, const char* vendorString, const char* productString)
+{
+    Gamepad::add(handle, buttonCount, joystickCount, triggerCount, vendorId, productId, vendorString, productString);
+}
+
+void Platform::gamepadEventDisconnectedInternal(GamepadHandle handle)
+{
+    Gamepad::remove(handle);
+}
+
+void Platform::shutdownInternal()
+{
+    Game::getInstance()->shutdown();
 }
 
 bool Platform::launchURL(const char* url)

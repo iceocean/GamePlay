@@ -383,7 +383,7 @@ void RenderState::cloneInto(RenderState* renderState, NodeCloneContext& context)
 }
 
 RenderState::StateBlock::StateBlock()
-    : _cullFaceEnabled(false), _depthTestEnabled(false), _depthWriteEnabled(false), _depthFunction(RenderState::DEPTH_LESS),
+    : _cullFaceEnabled(false), _depthTestEnabled(false), _depthWriteEnabled(true), _depthFunction(RenderState::DEPTH_LESS),
       _blendEnabled(false), _blendSrc(RenderState::BLEND_ONE), _blendDst(RenderState::BLEND_ZERO),
       _bits(0L)
 {
@@ -556,6 +556,14 @@ static RenderState::Blend parseBlend(const char* value)
         return RenderState::BLEND_ZERO;
     else if (upper == "ONE")
         return RenderState::BLEND_ONE;
+    else if (upper == "SRC_COLOR")
+        return RenderState::BLEND_SRC_COLOR;
+    else if (upper == "ONE_MINUS_SRC_COLOR")
+        return RenderState::BLEND_ONE_MINUS_SRC_COLOR;
+    else if (upper == "DST_COLOR")
+        return RenderState::BLEND_DST_COLOR;
+    else if (upper == "ONE_MINUS_DST_COLOR")
+        return RenderState::BLEND_ONE_MINUS_DST_COLOR;
     else if (upper == "SRC_ALPHA")
         return RenderState::BLEND_SRC_ALPHA;
     else if (upper == "ONE_MINUS_SRC_ALPHA")

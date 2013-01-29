@@ -7,8 +7,10 @@
 
 #define FRAMEBUFFER_WIDTH 1024
 #define FRAMEBUFFER_HEIGHT 1024
-static  Model* __model = NULL;
-static  Material* __material = NULL;
+
+Model* PostProcessTest::_quadModel = NULL;
+Material* PostProcessTest::_compositorMaterial = NULL;
+
 
 PostProcessTest::Compositor* PostProcessTest::Compositor::create(FrameBuffer* srcBuffer, FrameBuffer* dstBuffer, const char* materialPath, const char* techniqueId)
 {
@@ -17,11 +19,11 @@ PostProcessTest::Compositor* PostProcessTest::Compositor::create(FrameBuffer* sr
     Material* material = Material::create(materialPath);
     Texture::Sampler* sampler = Texture::Sampler::create(srcBuffer->getRenderTarget()->getTexture());
     material->getParameter("u_texture")->setValue(sampler);
-
-    if (__model == NULL)
+    SAFE_RELEASE(sampler);
+    if (_quadModel == NULL)
     {
         Mesh* mesh = Mesh::createQuadFullscreen();
-        __model = Model::create(mesh);
+        _quadModel = Model::create(mesh);
         SAFE_RELEASE(mesh);
     }
     
@@ -31,6 +33,21 @@ PostProcessTest::Compositor* PostProcessTest::Compositor::create(FrameBuffer* sr
 PostProcessTest::Compositor::Compositor(FrameBuffer* srcBuffer, FrameBuffer* dstBuffer, Material* material, const char* techniqueId)
     : _srcBuffer(srcBuffer), _dstBuffer(dstBuffer), _material(material),  _techniqueId(techniqueId)
 {
+}
+
+PostProcessTest::Compositor::~Compositor()
+{
+    SAFE_RELEASE(_material);
+}
+
+FrameBuffer* PostProcessTest::Compositor::getSrcFrameBuffer() const 
+{ 
+    return _srcBuffer; 
+}
+
+FrameBuffer* PostProcessTest::Compositor::getDstFrameBuffer() const
+{ 
+    return _dstBuffer; 
 }
 
 const char* PostProcessTest::Compositor::getTechniqueId() const
@@ -43,25 +60,17 @@ Material* PostProcessTest::Compositor::getMaterial() const
     return _material;
 }
 
-void PostProcessTest::Compositor::blit(const Rectangle& dst, bool clearBuffer, const Vector4& clearColor)
+void PostProcessTest::Compositor::blit(const Rectangle& dst)
 {
-    if (__material != _material)
+    if (_compositorMaterial != _material)
     {
-        __material = _material;
-        __model->setMaterial(__material);
+        _compositorMaterial = _material;
+        _quadModel->setMaterial(_compositorMaterial);
     }
-    __material->setTechnique(_techniqueId);
+    _compositorMaterial->setTechnique(_techniqueId);
 
-    if (_dstBuffer)
-        _dstBuffer->bind();
-    else
-        FrameBuffer::bindDefault();
-
-    if (clearBuffer)
-        Game::getInstance()->clear(CLEAR_COLOR, clearColor, 1.0f, 0);
-
-    __model->draw();
-    }
+    _quadModel->draw();
+}
 
 PostProcessTest::PostProcessTest()
     : _font(NULL), _scene(NULL), _modelNode(NULL), _frameBuffer(NULL), _compositorIndex(0)
@@ -89,36 +98,36 @@ void PostProcessTest::initialize()
     material->getParameter("u_lightDirection")->setValue(lightNode->getForwardVectorView());
 
     // Create one frame buffer for the full screen compositerss.
-    _frameBuffer = FrameBuffer::create("fb", FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
-    DepthStencilTarget* dst = DepthStencilTarget::create("", DepthStencilTarget::DEPTH_STENCIL, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    _frameBuffer = FrameBuffer::create("PostProcessTest", FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    DepthStencilTarget* dst = DepthStencilTarget::create("PostProcessTest", DepthStencilTarget::DEPTH_STENCIL, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
     _frameBuffer->setDepthStencilTarget(dst);
     SAFE_RELEASE(dst);
 
     // Create our compositors that all output to the default framebuffer.
     Compositor* compositor = NULL;
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Passthrough");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Passthrough");
     _compositors.push_back(compositor);
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Grayscale");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Grayscale");
     _compositors.push_back(compositor);
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Sepia");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Sepia");
     _compositors.push_back(compositor);
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Pixelate");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Pixelate");
     _compositors.push_back(compositor);
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Sobel Edge");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Sobel Edge");
     _compositors.push_back(compositor);
     compositor->getMaterial()->getParameter("u_width")->setValue((float)FRAMEBUFFER_WIDTH / 2.0f);
     compositor->getMaterial()->getParameter("u_height")->setValue((float)FRAMEBUFFER_HEIGHT / 2.0f);
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Gaussian Blur");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Gaussian Blur");
     _compositors.push_back(compositor);
     compositor->getMaterial()->getParameter("u_length")->setValue(1.0f / ((float)FRAMEBUFFER_WIDTH / 2.0f));
 
-    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess.material", "Old Film");
+    compositor = Compositor::create(_frameBuffer, NULL, "res/common/postprocess/postprocess.material", "Old Film");
     _compositors.push_back(compositor);
     compositor->getMaterial()->getParameter("u_sepiaValue")->setValue(0.8f);
     compositor->getMaterial()->getParameter("u_noiseValue")->setValue(0.4f);
@@ -131,6 +140,13 @@ void PostProcessTest::finalize()
 {
     SAFE_RELEASE(_font);
     SAFE_RELEASE(_scene);
+    for (std::vector<Compositor*>::iterator it = _compositors.begin(); it != _compositors.end(); ++it)
+    {
+        delete *it;
+    }
+    _compositors.clear();
+    SAFE_RELEASE(_quadModel);
+    SAFE_RELEASE(_frameBuffer);
 }
 
 void PostProcessTest::update(float elapsedTime)
@@ -156,25 +172,41 @@ void PostProcessTest::render(float elapsedTime)
     
     // Draw into the framebuffer
     Game::getInstance()->setViewport(Rectangle(FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT));
-    _frameBuffer->bind();
+    FrameBuffer* previousFrameBuffer = _frameBuffer->bind();
     clear(CLEAR_COLOR_DEPTH, Vector4::zero(), 1.0f, 0);
     _scene->visit(this, &PostProcessTest::drawScene);
-    
+
     // Bind the current compositor
     Game::getInstance()->setViewport(defaultViewport);
     Compositor* compositor = _compositors[_compositorIndex];
-    compositor->blit(defaultViewport, true);
+
+    FrameBuffer* compositorDstFrameBuffer = compositor->getDstFrameBuffer();
+    FrameBuffer* prevToCompositeFrameBuffer = NULL;
+    if (compositorDstFrameBuffer)
+    {
+        prevToCompositeFrameBuffer = compositorDstFrameBuffer->bind();
+    }
+    else
+    {
+        prevToCompositeFrameBuffer = previousFrameBuffer->bind();
+    }
+
+    Game::getInstance()->clear(CLEAR_COLOR, Vector4(0, 0, 0, 1), 1.0f, 0);
+    compositor->blit(defaultViewport);
     drawFrameRate(_font, Vector4(0, 0.5f, 1, 1), 5, 1, getFrameRate());
     drawTechniqueId(compositor->getTechniqueId());
-    
+
+    previousFrameBuffer->bind();
+
     // Draw the pass through compositor at index 0 at quarter of the size and bottom right. dont clear the dest just draw last on top
     float quarterWidth = getWidth() / 4;
     float quarterHeight = getHeight() / 4;
     Rectangle offsetViewport = Rectangle(getWidth() - quarterWidth, 0, quarterWidth, quarterHeight);
     Game::getInstance()->setViewport(offsetViewport);
     compositor = _compositors[0];
-    compositor->blit(offsetViewport, false);
+    compositor->blit(offsetViewport);
     Game::getInstance()->setViewport(defaultViewport);
+
 }
 
 bool PostProcessTest::drawScene(Node* node)
